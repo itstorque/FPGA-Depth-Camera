@@ -9,12 +9,12 @@ import imported.VgaClkGen
 @SynthTop
 class FpgaTop(
     @In var clk_100mhz: Boolean,
-    @In var ja: Ubit<`8`>,
-    @In var jb: Ubit<`3`>,
-    @Out var jbclk: Boolean,
-    @Out var vga_r: Ubit<`3`>,
-    @Out var vga_b: Ubit<`3`>,
-    @Out var vga_g: Ubit<`3`>,
+    @In var jc: Ubit<`8`>,
+    @In var jd: Ubit<`3`>,
+    @Out var jdclk: Boolean,
+    @Out var vga_r: Ubit<`4`>,
+    @Out var vga_b: Ubit<`4`>,
+    @Out var vga_g: Ubit<`4`>,
     @Out var vga_hs: Boolean,
     @Out var vga_vs: Boolean
 ) : Module() {
@@ -59,10 +59,10 @@ class FpgaTop(
     @Seq
     fun seqBufferInput() {
         on(posedge(clk_65mhz)) {
-            pclk_buff = jb[0]
-            vsync_buff = jb[1]
-            href_buff = jb[2]
-            pixel_buff = ja
+            pclk_buff = jd[0]
+            vsync_buff = jd[1]
+            href_buff = jd[2]
+            pixel_buff = jc
 
             pclk_in = pclk_buff
             vsync_in = vsync_buff
@@ -75,7 +75,7 @@ class FpgaTop(
 
     @Com
     fun comJbclk() {
-        jbclk = xclk_count > u(0b01)
+        jdclk = xclk_count > u(0b01)
     }
 
     var output_pixels: Ubit<`16`> = nc()
@@ -99,18 +99,34 @@ class FpgaTop(
     fun seqPixelAddr() {
         on(posedge(pclk_in)) {
             pixel_addr_in = if (frame_done_out) u0() else pixel_addr_in + u(1)
+            pixel_addr_in = when {
+                frame_done_out -> u0()
+                valid_pixel -> pixel_addr_in + u(1)
+                else -> pixel_addr_in
+            }
         }
     }
 
     @Com
-    var pixel_addr_out: Ubit<`17`> = hcount + (vcount mul u(320)).tru<`17`>()
+    var pixel_addr_out: Ubit<`17`> = (hcount shr 1) + ((vcount shr 1) mul u(320)).tru<`17`>()
+
+//    var count: Ubit<`28`> = nc()
+//
+//    @Seq
+//    fun setCount() {
+//        on(posedge(clk_100mhz)) {
+//            if (count == u1<`28`>()) count = u0<`28`>()
+//            else count += u(1)
+//        }
+//    }
 
     @Com
-    var processed_pixels: Ubit<`12`> = cat(
-        output_pixels.slice<`4`>(12),
-        output_pixels.slice<`4`>(7),
-        output_pixels.slice<`4`>(1)
-    )
+    var processed_pixels: Ubit<`12`> = //if (count >= cat(u("1'b1"), u("27'b00_0000_0000"))) u("12'b1111_0000_0000") else u("12'b0000_1111_0000")
+        cat(
+            output_pixels.slice<`4`>(12),
+            output_pixels.slice<`4`>(7),
+            output_pixels.slice<`4`>(1)
+        )
 
     var frame_buff_out: Ubit<`12`> = nc()
 
@@ -137,6 +153,9 @@ class FpgaTop(
             vsync_out = vsync
             blank_out = blank
             rgb_out = if (hcount < u(320) && vcount < u(240)) frame_buff_out else u0()
+//            rgb_out = if (hcount < u(10) && vcount < u(240)) u("12'b1111_0000_0000") else u0()
+//            rgb_out = if (hcount < u(20) && vcount < u(240)) u("12'b0000_1111_0000") else u0()
+//            rgb_out = if (hcount < u(50) && vcount < u(240)) u("12'b1111_0000_0000") else u0()
         }
     }
 
