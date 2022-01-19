@@ -23,7 +23,11 @@ class FpgaTop(
     @Out var vga_b: Ubit<`4`>,
     @Out var vga_g: Ubit<`4`>,
     @Out var vga_hs: Boolean,
-    @Out var vga_vs: Boolean
+    @Out var vga_vs: Boolean,
+
+    @In var sw: Ubit<`16`>,
+
+    @Out var led: Ubit<`16`>,
 
 ) : Module() {
 
@@ -100,23 +104,6 @@ class FpgaTop(
         }
     }
 
-    @Seq
-    fun seqPixelAddr2() {
-        on(posedge(pclk_in_2)) {
-            pixel_addr_in_2 = if (frame_done_out_2) u0() else pixel_addr_in_2 + u(1)
-            pixel_addr_in_2 = when {
-                frame_done_out_2 -> u0()
-                valid_pixel_2 -> pixel_addr_in_2 + u(1)
-                else -> pixel_addr_in_2
-            }
-        }
-    }
-
-    var upscale: Int = 0
-
-    @Com
-    var pixel_addr_out: Ubit<`17`> = (hcount shr upscale) + ((vcount shr upscale) mul u(320)).tru<`17`>()
-
     @Com
     fun comJbclk() {
         jbclk = xclk_count > u(0b01)
@@ -156,21 +143,26 @@ class FpgaTop(
     var pixel_addr_in: Ubit<`17`> = nc()
     var pixel_addr_in_2: Ubit<`17`> = nc()
 
-    var COM_1 : Ubit<`17`> = nc()
-    var COM_2 : Ubit<`17`> = nc()
+    var COM_x_1 : Ubit<`33`> = nc() // TODO: do we really need this many bits...
+    var COM_y_1 : Ubit<`33`> = nc()
+    var COM_N_1 : Ubit<`22`> = nc()
+
+    var COM_x_2 : Ubit<`33`> = nc() // TODO: do we really need this many bits...
+    var COM_y_2 : Ubit<`33`> = nc()
+    var COM_N_2 : Ubit<`22`> = nc()
+
+    var COM_out_x_1 : Ubit<`11`> = nc()
+    var COM_out_y_1 : Ubit<`10`> = nc()
+
+    var COM_out_x_2 : Ubit<`11`> = nc()
+    var COM_out_y_2 : Ubit<`10`> = nc()
+
+    var test : Ubit<`12`> = nc()
+    var test2 : Ubit<`12`> = nc()
 
     @Seq
     fun seqPixelAddr() {
         on(posedge(pclk_in)) {
-
-            if (frame_done_out) {
-                COM_1 = u0();
-            } else {
-                // get upper three bits of val, and if there sum is greater than const then is part of OBJ
-                var pixel_mag : Ubit<`5`> = frame_buff_out.sli<`3`>(1) add frame_buff_out.sli<`3`>(5) add frame_buff_out.sli<`3`>(9)
-                frame_buff_out = if (pixel_mag > u("5'b01100")) u("12'b1111_0000_0000") else frame_buff_out
-            }
-
             pixel_addr_in = if (frame_done_out) u0() else pixel_addr_in + u(1)
             pixel_addr_in = when {
                 frame_done_out -> u0()
@@ -255,35 +247,148 @@ class FpgaTop(
     var vsync_out: Boolean = nc()
 
     @Seq
+    fun processImage() {
+
+        on(posedge(pclk_in)) {
+
+            if (frame_done_out) {
+
+                COM_out_x_1 = (((COM_x_1 / COM_N_1) * sw.sli<`4`>(5)) ).tru()
+                COM_out_y_1 = (COM_y_1 / COM_N_1).tru()
+
+//                led = COM_out_x_1.ext()
+
+                COM_x_1 = u0()
+                COM_y_1 = u0()
+                COM_N_1 = u0()
+
+                test = u0()
+
+            } else {
+                // get upper three bits of val, and if there sum is greater than const then is part of OBJ
+
+                if ( hcount > u(20) && vcount > u(20) && hcount < u(300) && vcount < u(220) ) { // TODO: revisit if condition can help
+                    var pixel_mag : Ubit<`5`> = frame_buff_out.sli<`3`>(1) add frame_buff_out.sli<`3`>(5) add frame_buff_out.sli<`3`>(9)
+                    test = u0() //if (pixel_mag > u("5'b01100")) u("12'b1111_0000_1111") else u0()
+                    if (pixel_mag > sw.sli<`5`>(11)) {
+
+                        COM_x_1 += hcount
+                        COM_y_1 += vcount
+                        COM_N_1 += sw.sli<`4`>(0)//u("21'b10")
+
+                        if (sw[15]) {
+
+                            if (test > u("12'b1000_0000_1000")) {
+                                test = u("12'b1111_0000_1111")
+                            } else {
+                                test = u("12'b0111_0000_0111") + test
+                            }
+
+                        }
+
+                    }
+                } else {
+
+                    test = u0()
+
+                }
+            }
+
+        }
+
+    }
+
+    @Seq
+    fun processImage2() {
+
+        on(posedge(pclk_in_2)) {
+
+            if (frame_done_out_2) {
+
+                COM_out_x_2 = (((COM_x_2 / COM_N_2) * sw.sli<`4`>(5)) ).tru()
+                COM_out_y_2 = (COM_y_2 / COM_N_2).tru()
+
+                COM_x_2 = u0()
+                COM_y_2 = u0()
+                COM_N_2 = u0()
+
+                test2 = u0()
+
+            } else {
+                // get upper three bits of val, and if there sum is greater than const then is part of OBJ
+
+                if ( hcount > u(20) && vcount > u(20) && hcount < u(300) && vcount < u(220) ) { // TODO: revisit if condition can help
+                    var pixel_mag : Ubit<`5`> = frame_buff_out.sli<`3`>(1) add frame_buff_out.sli<`3`>(5) add frame_buff_out.sli<`3`>(9)
+                    test2 = u0() //if (pixel_mag > u("5'b01100")) u("12'b1111_0000_1111") else u0()
+                    if (pixel_mag > sw.sli<`5`>(10)) {
+
+                        COM_x_2 += hcount
+                        COM_y_2 += vcount
+                        COM_N_2 += sw.sli<`4`>(0)//u("21'b10")
+
+                        if (sw[15]) {
+
+                            if (test2 > u("12'b1000_0000_1000")) {
+                                test2 = u("12'b1111_0000_1111")
+                            } else {
+                                test2 = u("12'b0111_0000_0111") + test2
+                            }
+
+                        }
+
+                    }
+                } else {
+
+                    test2 = u0()
+
+                }
+            }
+
+        }
+
+    }
+
+    @Seq
     fun seqOutput() {
         on(posedge(clk_65mhz)) {
+
+            led[0] = COM_out_x_1[0]
+            led[1] = COM_out_x_1[1]
+            led[2] = COM_out_x_1[2]
+            led[3] = COM_out_x_1[3]
+            led[4] = COM_out_x_1[4] // led[4] doesn't work on the board
+            led[5] = COM_out_x_1[5]
+            led[6] = COM_out_x_1[6]
+            led[7] = COM_out_x_1[7]
+
+
+            led[8]  = COM_out_x_2[0]
+            led[9]  = COM_out_x_2[1]
+            led[10] = COM_out_x_2[2]
+            led[11] = COM_out_x_2[3]
+            led[12] = COM_out_x_2[4]
+            led[13] = COM_out_x_2[5]
+            led[14] = COM_out_x_2[6]
+            led[15] = COM_out_x_2[7]
+
+
             hsync_out = hsync
             vsync_out = vsync
             blank_out = blank
 
-            var rgb_out_val : Ubit<`12`>  = if (hcount < u(320) && vcount < u(240)) frame_buff_out else u0()
-            rgb_out_val = if (hcount > u(320) && hcount < u(640) && vcount < u(240)) frame_buff_out_2 else rgb_out_val
+            var rgb_out_val : Ubit<`12`>  = if (hcount < u(320) && vcount < u(240)) frame_buff_out+test else test+test2 //u0()
+//            rgb_out_val  = if (hcount < u(320) && vcount < u(240) && test > u("12'b1")) test else rgb_out_val //  && vcount <= u(121) && vcount >= u(199)
+            rgb_out_val = if (hcount > u(320) && hcount < u(640) && vcount < u(240)) frame_buff_out_2+test2 else rgb_out_val
+
+            rgb_out_val  = if (hcount <= COM_out_x_1 + u(1) && hcount >= COM_out_x_1 - u(1)) u("12'b1111_0000_0000") else rgb_out_val
+            rgb_out_val  = if (vcount <= COM_out_y_1 + u(1) && vcount >= COM_out_y_1 - u(1)) u("12'b0000_0000_1111") else rgb_out_val
+
+            rgb_out_val  = if (hcount <= COM_out_x_2 + u(1) && hcount >= COM_out_x_2 - u(1)) u("12'b1111_0000_1111") else rgb_out_val
+            rgb_out_val  = if (vcount <= COM_out_y_2 + u(1) && vcount >= COM_out_y_2 - u(1)) u("12'b0000_1111_1111") else rgb_out_val
 
             rgb_out = rgb_out_val
         }
     }
-
-    @Seq
-    fun seqPixelAddr2() {
-        on(posedge(pclk_in_2)) {
-            pixel_addr_in_2 = if (frame_done_out_2) u0() else pixel_addr_in_2 + u(1)
-            pixel_addr_in_2 = when {
-                frame_done_out_2 -> u0()
-                valid_pixel_2 -> pixel_addr_in_2 + u(1)
-                else -> pixel_addr_in_2
-            }
-        }
-    }
-
-    var upscale: Int = 0
-
-    @Com
-    var pixel_addr_out: Ubit<`17`> = (hcount shr upscale) + ((vcount shr upscale) mul u(320)).tru<`17`>()
 
     @Com
     fun comOutput() {
