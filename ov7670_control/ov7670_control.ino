@@ -160,9 +160,9 @@ uint8_t settings[][2] = {
   {0x89, 0xe8},
   //WB Stuff (new stuff!!!!)
   {0x00, 0x00}, //set gain reg to 0 for AGC
-  {0x01, 0x9F}, //blue gain (default 80)
-  {0x02, 0x9F}, //red gain (default 80)
-  {0x6a, 0x7D}, //green gain (default not sure!)
+  {0x01, 0x00}, //blue gain (default 80)
+  {0x02, 0x80}, //red gain (default 80)
+  {0x6a, 0xFF}, //green gain (default not sure!)
   {0x13, 0x00}, //disable all automatic features!! (including automatic white balance)
 
 

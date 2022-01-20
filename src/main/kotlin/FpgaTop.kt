@@ -253,10 +253,8 @@ class FpgaTop(
 
             if (frame_done_out) {
 
-                COM_out_x_1 = (((COM_x_1 / COM_N_1) * sw.sli<`4`>(5)) ).tru()
+                COM_out_x_1 = (COM_x_1 / COM_N_1).tru()
                 COM_out_y_1 = (COM_y_1 / COM_N_1).tru()
-
-//                led = COM_out_x_1.ext()
 
                 COM_x_1 = u0()
                 COM_y_1 = u0()
@@ -268,13 +266,15 @@ class FpgaTop(
                 // get upper three bits of val, and if there sum is greater than const then is part of OBJ
 
                 if ( hcount > u(20) && vcount > u(20) && hcount < u(300) && vcount < u(220) ) { // TODO: revisit if condition can help
-                    var pixel_mag : Ubit<`5`> = frame_buff_out.sli<`3`>(1) add frame_buff_out.sli<`3`>(5) add frame_buff_out.sli<`3`>(9)
+                    var pixel_mag : Ubit<`6`> = (if (sw[13]) frame_buff_out.sli<`4`>(0) else u0<`4`>()) add
+                            (if (sw[12]) frame_buff_out.sli<`4`>(4) else u0<`4`>()) add
+                            (if (sw[11]) frame_buff_out.sli<`4`>(8) else u0<`4`>())
                     test = u0() //if (pixel_mag > u("5'b01100")) u("12'b1111_0000_1111") else u0()
-                    if (pixel_mag > sw.sli<`5`>(11)) {
+                    if (pixel_mag > sw.sli<`5`>(0)) {
 
                         COM_x_1 += hcount
                         COM_y_1 += vcount
-                        COM_N_1 += sw.sli<`4`>(0)//u("21'b10")
+                        COM_N_1 += u("21'b1")
 
                         if (sw[15]) {
 
@@ -305,7 +305,7 @@ class FpgaTop(
 
             if (frame_done_out_2) {
 
-                COM_out_x_2 = (((COM_x_2 / COM_N_2) * sw.sli<`4`>(5)) ).tru()
+                COM_out_x_2 = (COM_x_2 / COM_N_2).tru()
                 COM_out_y_2 = (COM_y_2 / COM_N_2).tru()
 
                 COM_x_2 = u0()
@@ -317,14 +317,16 @@ class FpgaTop(
             } else {
                 // get upper three bits of val, and if there sum is greater than const then is part of OBJ
 
-                if ( hcount > u(20) && vcount > u(20) && hcount < u(300) && vcount < u(220) ) { // TODO: revisit if condition can help
-                    var pixel_mag : Ubit<`5`> = frame_buff_out.sli<`3`>(1) add frame_buff_out.sli<`3`>(5) add frame_buff_out.sli<`3`>(9)
+                if ( hcount > u(360) && vcount > u(20) && hcount < u(600) && vcount < u(220) ) { // TODO: revisit if condition can help
+                    var pixel_mag : Ubit<`6`> = (if (sw[13]) frame_buff_out_2.sli<`4`>(0) else u0<`4`>()) add
+                                                (if (sw[12]) frame_buff_out_2.sli<`4`>(4) else u0<`4`>()) add
+                                                (if (sw[11]) frame_buff_out_2.sli<`4`>(8) else u0<`4`>())
                     test2 = u0() //if (pixel_mag > u("5'b01100")) u("12'b1111_0000_1111") else u0()
-                    if (pixel_mag > sw.sli<`5`>(10)) {
+                    if (pixel_mag > sw.sli<`6`>(0)) {
 
                         COM_x_2 += hcount
                         COM_y_2 += vcount
-                        COM_N_2 += sw.sli<`4`>(0)//u("21'b10")
+                        COM_N_2 += u("21'b1")
 
                         if (sw[15]) {
 
@@ -349,32 +351,53 @@ class FpgaTop(
     }
 
     @Seq
+    fun distance_processing() {
+
+        on(posedge(clk_65mhz)) {
+
+            var pix_dist = COM_out_x_2 - COM_out_x_1
+            led = pix_dist
+
+        }
+
+    }
+
+    @Seq
     fun seqOutput() {
         on(posedge(clk_65mhz)) {
 
-            led[0] = COM_out_x_1[0]
-            led[1] = COM_out_x_1[1]
-            led[2] = COM_out_x_1[2]
-            led[3] = COM_out_x_1[3]
-            led[4] = COM_out_x_1[4] // led[4] doesn't work on the board
-            led[5] = COM_out_x_1[5]
-            led[6] = COM_out_x_1[6]
-            led[7] = COM_out_x_1[7]
-
-
-            led[8]  = COM_out_x_2[0]
-            led[9]  = COM_out_x_2[1]
-            led[10] = COM_out_x_2[2]
-            led[11] = COM_out_x_2[3]
-            led[12] = COM_out_x_2[4]
-            led[13] = COM_out_x_2[5]
-            led[14] = COM_out_x_2[6]
-            led[15] = COM_out_x_2[7]
-
+//            led[0] = COM_out_x_1[0]
+//            led[1] = COM_out_x_1[1]
+//            led[2] = COM_out_x_1[2]
+//            led[3] = COM_out_x_1[3]
+//            led[4] = COM_out_x_1[4] // led[4] doesn't work on the board
+//            led[5] = COM_out_x_1[5]
+//            led[6] = COM_out_x_1[6]
+//            led[7] = COM_out_x_1[7]
+//
+//
+//            led[8]  = COM_out_x_2[0]
+//            led[9]  = COM_out_x_2[1]
+//            led[10] = COM_out_x_2[2]
+//            led[11] = COM_out_x_2[3]
+//            led[12] = COM_out_x_2[4]
+//            led[13] = COM_out_x_2[5]
+//            led[14] = COM_out_x_2[6]
+//            led[15] = COM_out_x_2[7]
 
             hsync_out = hsync
             vsync_out = vsync
             blank_out = blank
+
+            var modifier_2_x : Ubit<`11`> = u0()
+            var modifier_2_y : Ubit<`10`> = u0()
+
+            if (sw[14]) {
+
+                modifier_2_x = u("11'd320")
+                modifier_2_y = u0()
+
+            }
 
             var rgb_out_val : Ubit<`12`>  = if (hcount < u(320) && vcount < u(240)) frame_buff_out+test else test+test2 //u0()
 //            rgb_out_val  = if (hcount < u(320) && vcount < u(240) && test > u("12'b1")) test else rgb_out_val //  && vcount <= u(121) && vcount >= u(199)
@@ -383,8 +406,8 @@ class FpgaTop(
             rgb_out_val  = if (hcount <= COM_out_x_1 + u(1) && hcount >= COM_out_x_1 - u(1)) u("12'b1111_0000_0000") else rgb_out_val
             rgb_out_val  = if (vcount <= COM_out_y_1 + u(1) && vcount >= COM_out_y_1 - u(1)) u("12'b0000_0000_1111") else rgb_out_val
 
-            rgb_out_val  = if (hcount <= COM_out_x_2 + u(1) && hcount >= COM_out_x_2 - u(1)) u("12'b1111_0000_1111") else rgb_out_val
-            rgb_out_val  = if (vcount <= COM_out_y_2 + u(1) && vcount >= COM_out_y_2 - u(1)) u("12'b0000_1111_1111") else rgb_out_val
+            rgb_out_val  = if (hcount <= COM_out_x_2 - modifier_2_x + u(1) && hcount >= COM_out_x_2 - modifier_2_x - u(1)) u("12'b1111_0000_1111") else rgb_out_val
+            rgb_out_val  = if (vcount <= COM_out_y_2 - modifier_2_y + u(1) && vcount >= COM_out_y_2 - modifier_2_y - u(1)) u("12'b0000_1111_1111") else rgb_out_val
 
             rgb_out = rgb_out_val
         }
