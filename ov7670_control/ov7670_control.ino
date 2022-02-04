@@ -100,7 +100,7 @@ const byte ADDR = 0x21; //name of the camera on I2C
 //    {0x13, 0xe7} //COM8, enable AGC //AEC (was 0xe5) (try this at 0xe7)
 //
 //}; 
-uint8_t settings[][2] = {
+uint8_t settings_green[][2] = {
   {0x12, 0x80}, //reset
   {0xFF, 0xF0}, //delay
   {0x12, 0b10100}, // COM7,     set RGB color output (QVGA and test pattern 0x6...for RGB video 0x4)
@@ -173,6 +173,109 @@ uint8_t settings[][2] = {
 
   {0x07, 0xFF},
   {0x10, 0xFF},
+};
+
+uint8_t settings[][2] = {
+  {0x12, 0x80}, //reset
+  {0xFF, 0xF0}, //delay
+  {0x12, 0x14}, // COM7,     set RGB color output (QVGA and test pattern 0x6...for RGB video 0x4)
+  {0x11, 0x80}, // CLKRC     internal PLL matches input clock
+  {0x0C, 0x00}, // COM3,     default settings
+  {0x3E, 0x00}, // COM14,    no scaling, normal pclock
+  {0x04, 0x00}, // COM1,     disable CCIR656
+  {0x40, 0xd0}, //COM15,     RGB565, full output range
+  {0x3a, 0x04}, //TSLB       set correct output data sequence (magic)
+  {0x14, 0x18}, //COM9       MAX AGC value x4
+  {0x4F, 0xB3}, //MTX1       all of these are magical matrix coefficients
+  {0x50, 0xB3}, //MTX2
+  {0x51, 0x00}, //MTX3
+  {0x52, 0x3d}, //MTX4
+  {0x53, 0xA7}, //MTX5
+  {0x54, 0xE4}, //MTX6
+  {0x58, 0x9E}, //MTXS
+  {0x3D, 0xC0}, //COM13      sets gamma enable, does not preserve reserved bits, may be wrong?
+  {0x17, 0x14}, //HSTART     start high 8 bits
+  {0x18, 0x02}, //HSTOP      stop high 8 bits //these kill the odd colored line
+  {0x32, 0x80}, //HREF       edge offset
+  {0x19, 0x03}, //VSTART     start high 8 bits
+  {0x1A, 0x7B}, //VSTOP      stop high 8 bits
+  {0x03, 0x0A}, //VREF       vsync edge offset
+  {0x0F, 0x41}, //COM6       reset timings
+  {0x1E, 0x00}, //MVFP       disable mirror / flip //might have magic value of 03
+  {0x33, 0x0B}, //CHLF       //magic value from the internet
+  {0x3C, 0x78}, //COM12      no HREF when VSYNC low
+  {0x69, 0b00000100}, //GFIX       fix gain control
+  {0x74, 0x00}, //REG74      Digital gain control
+  {0xB0, 0x84}, //RSVD       magic value from the internet *required* for good color
+  {0xB1, 0x0c}, //ABLC1
+  {0xB2, 0x0e}, //RSVD       more magic internet values
+  {0xB3, 0x80}, //THL_ST
+  //begin mystery scaling numbers. Thanks, internet!
+  {0x70, 0x3a},
+  {0x71, 0x35},
+  {0x72, 0x11},
+  {0x73, 0xf0},
+  {0xa2, 0x02},
+  //gamma curve values
+  {0x7a, 0x20},
+  {0x7b, 0x10},
+  {0x7c, 0x1e},
+  {0x7d, 0x35},
+  {0x7e, 0x5a},
+  {0x7f, 0x69},
+  {0x80, 0x76},
+  {0x81, 0x80},
+  {0x82, 0x88},
+  {0x83, 0x8f},
+  {0x84, 0x96},
+  {0x85, 0xa3},
+  {0x86, 0xaf},
+  {0x87, 0xc4},
+  {0x88, 0xd7},
+  {0x89, 0xe8},
+  //WB Stuff (new stuff!!!!)
+
+    // for 14130
+  {0x00, 0xCC}, //set gain reg to 0 for AGC
+  {0x01, 0xFF}, //blue gain (default 80)
+  {0x02, 0x5F}, //red gain (default 80)
+  {0x6a, 0x90}, //green gain (default not sure!)
+
+//  // for 14120
+//  {0x00, 0xCC}, //set gain reg to 0 for AGC
+//  {0x01, 0xFF}, //blue gain (default 80)
+//  {0x02, 0x6F}, //red gain (default 80)
+//  {0x6a, 0x80}, //green gain (default not sure!)
+  
+
+  // old
+  // for 14130
+//  {0x00, 0xDD}, //set gain reg to 0 for AGC
+//  {0x01, 0xAF}, //blue gain (default 80)
+//  {0x02, 0x9F}, //red gain (default 80)
+//  {0x6a, 0xB0}, //green gain (default not sure!)
+
+//  // for 14120
+//  {0x00, 0x44}, //set gain reg to 0 for AGC
+//  {0x01, 0x90}, //blue gain (default 80)
+//  {0x02, 0x90}, //red gain (default 80)
+//  {0x6a, 0x90}, //green gain (default not sure!)
+
+  // dep for 14120
+//  {0xBF, 0x00}, // red black level compensation
+//  {0x2c, 0x0F}, // 
+//  {0x0F, 0b101011},
+  
+  {0x13, 0x00}, //disable all automatic features!! (including automatic white balance)
+
+
+
+//  {0x04, 0x01},
+//  {0x05, 0x00},
+//  {0x06, 0x00},
+//
+//  {0x07, 0xFF},
+//  {0x10, 0xFF},
 };
 
 uint8_t output_state;
