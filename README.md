@@ -22,11 +22,11 @@ over the average of the other two. For displaying purposes, the other channels a
 
 The file structure is as below
 
-- `.idea`: IntelliJ IDEA project configuration directory.
-- `src/`: Project source directory.
-- `build`: Build output directory.
-- `build.gradle.kts`: Gradle build file.
-- `settings.gradle.kts`: Gradle settings file.
+- `build/`: Build output directory.
 - `ip/`: Contains all the ip imported into the projected.
-- `ov7670_control`: Arduino code that controls the two Lolins.
+- `ov7670_control/`: Arduino code that controls the two Lolins.
+- `src/`: Project source directory.
+- `.idea`: IntelliJ IDEA project configuration directory.
+- `build.gradle.kts`: Gradle build file.
 - `LUTgenerator.py`: generates the look-up table that converts pixel locations to distance estimations.
+- `settings.gradle.kts`: Gradle settings file.
